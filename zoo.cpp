@@ -4,6 +4,7 @@
 #include <iomanip>
 #include <iostream>
 #include <limits>
+#include <list>
 #include <vector>
 #define doubleInf numeric_limits<double>::infinity()
 using namespace std;
@@ -135,6 +136,83 @@ double mst(vector<Cage>& cages, uint16_t startIndex, uint16_t endIndex, vector<C
     return len;
 }
 
+double nearestInsert(vector<Cage>& cages, vector<uint16_t>& res) {
+    vector<bool> isIn(cages.size(), false);
+    res.resize(cages.size() + 1);
+    Cage::Mix dist;
+    if (cages.size() > 1) {
+        double minDis = doubleInf;
+        uint16_t cage = 1;
+        for (uint16_t i = 1; i < cages.size(); ++i) {
+            double nowDis = dist(cages[0], cages[i]);
+            if (nowDis < minDis) {
+                minDis = nowDis;
+                cage = i;
+            }
+        }
+        isIn[0] = true;
+        isIn[cage] = true;
+        res[0] = 0;
+        res[1] = cage;
+        res[2] = 0;
+    }
+    vector<uint16_t> nearest(cages.size(), 0);
+    for (uint16_t i = 1; i < cages.size(); ++i) {
+        if (!isIn[i]) {
+            nearest[i] = dist(cages[i], cages[0]) < dist(cages[i], cages[res[1]]) ? 0 : res[1];
+        }
+    }
+
+    for (uint16_t count = 2; count < cages.size(); ++count) {
+        double minDis = doubleInf;
+        uint16_t cage = 1;
+        for (uint16_t i = 1; i < cages.size(); ++i) {
+            if (isIn[i])
+                continue;
+            double nowDis = dist(cages[i], cages[nearest[i]]);
+            if (nowDis < minDis) {
+                minDis = nowDis;
+                cage = i;
+            }
+        }
+        double minCost = doubleInf;
+        uint16_t insertBefore = 0;
+        for (uint16_t i = count; i > 0; --i) {
+            double nowCost = dist(cages[res[i]], cages[cage]) + dist(cages[res[i - 1]], cages[cage]) -
+                             dist(cages[res[i]], cages[res[i - 1]]);
+            if (nowCost < minCost) {
+                minCost = nowCost;
+                insertBefore = i;
+            }
+        }
+        for (uint16_t i = count + 1; i > insertBefore; --i) {
+            res[i] = res[i - 1];
+        }
+        res[insertBefore] = cage;
+        isIn[cage] = true;
+        for (uint16_t i = 1; i < cages.size(); ++i) {
+            if ((!isIn[i]) && dist(cages[cage], cages[i]) < dist(cages[i], cages[nearest[i]])) {
+                nearest[i] = cage;
+            }
+        }
+    }
+
+    // for (uint16_t i = 1; i < cages.size(); ++i) {
+    //     for (uint16_t j = i + 2; j < cages.size(); ++j) {
+    //         if (dist(cages[res[i - 1]], cages[res[i]]) + dist(cages[res[i + 1]], cages[res[i]]) +
+    //                 dist(cages[res[j - 1]], cages[res[j]]) + dist(cages[res[j + 1]], cages[res[j]]) >
+    //             dist(cages[res[i - 1]], cages[res[j]]) + dist(cages[res[i + 1]], cages[res[j]]) +
+    //                 dist(cages[res[j - 1]], cages[res[i]]) + dist(cages[res[j + 1]], cages[res[i]]))
+    //             swap(res[i], res[j]);
+    //     }
+    // }
+
+    double len = 0;
+    for (uint16_t i = 0; i < cages.size(); ++i)
+        len += dist(cages[res[i]], cages[res[i + 1]]);
+    return len;
+}
+
 int main(int argc, char** argv) {
     ios_base::sync_with_stdio(false);
     cin.tie(0);
@@ -191,6 +269,11 @@ int main(int argc, char** argv) {
             cout << min(res[i].i, res[i].j) << " " << max(res[i].i, res[i].j) << '\n';
         }
     } else if (mode == Mode::FASTTSP) {
+        vector<uint16_t> res;
+        double len = nearestInsert(cages, res);
+        cout << len << '\n';
+        for (uint16_t i = 0; i < n; ++i)
+            cout << res[i] << ' ';
     }
 
     // in part C, call part B first to be the starting point of part C.
