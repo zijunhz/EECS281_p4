@@ -6,3 +6,4 @@
 *.o
 /zoo
 *.tar.gz
+/zoo_valgrind
