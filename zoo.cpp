@@ -1,3 +1,5 @@
+// 3E33912F8BAA7542FC4A1585D2DB6FE0312725B9
+
 #include <getopt.h>
 #include <cmath>
 #include <cstring>
@@ -11,6 +13,7 @@ using namespace std;
 
 // #define DEBUG_INPUT
 // #define DEBUG_MST
+// #define DEBUG_PROMISING
 
 enum class Mode { MST, FASTTSP, OPTTSP };
 
@@ -29,12 +32,12 @@ class Cage {
     Type type;
     Cage() : x(0), y(0), type(Type::Wall) {}
     Cage(int32_t x, int32_t y) : x(x), y(y) {
-        if ((x > 0 || y > 0) && (x != 0) && (y != 0))
-            type = Type::Safe;
-        else if (x < 0 && y < 0)
+        if (x < 0 && y < 0)
             type = Type::Wild;
-        else
+        else if ((x == 0 && y <= 0) || (y == 0 && x <= 0))
             type = Type::Wall;
+        else
+            type = Type::Safe;
     }
     Cage(const Cage& c) : x(c.x), y(c.y), type(c.type) {}
     Cage& operator=(const Cage& c) {
@@ -49,9 +52,21 @@ class Cage {
             return sqrt(double(a.x - b.x) * double(a.x - b.x) + double(a.y - b.y) * double(a.y - b.y));
         }
     };
+    struct DistinguishSq {
+        double operator()(const Cage& a, const Cage& b) {
+            if (a.type + b.type == 3)
+                return doubleInf;
+            return double(a.x - b.x) * double(a.x - b.x) + double(a.y - b.y) * double(a.y - b.y);
+        }
+    };
     struct Mix {
         double operator()(const Cage& a, const Cage& b) {
             return sqrt(double(a.x - b.x) * double(a.x - b.x) + double(a.y - b.y) * double(a.y - b.y));
+        }
+    };
+    struct MixSq {
+        double operator()(const Cage& a, const Cage& b) {
+            return double(a.x - b.x) * double(a.x - b.x) + double(a.y - b.y) * double(a.y - b.y);
         }
     };
     void print() { cout << "    Cage(" << x << "," << y << ") type: " << type << "\n"; }
@@ -59,37 +74,13 @@ class Cage {
 
 // this is for part B: https://stemlounge.com/animated-algorithms-for-the-traveling-salesman-problem/
 
-// template <typename T>
-// void genPerms(vector<T>& path, size_t permLength) {
-//     if (permLength == path.size()) {
-//         // Do something with the path
-//         // curCost+=closing edge
-//         // check the path and see if it's better
-
-//         // curCost-= closing edge
-//         return;
-//     }  // if ..complete path
-
-//     if (!promising(path, permLength)) {
-//         return;
-//     }  // if ..not promising
-
-//     // if estimate > opt, cut
-//     // do mst on the rest
-//     // only calc estimate when # unvisited >= 5
-
-//     for (size_t i = permLength; i < path.size(); ++i) {
-//         swap(path[permLength], path[i]);
-//         // curCost+=
-//         // stop genPerm
-//         genPerms(path, permLength + 1);
-//         // curCost-=
-//         swap(path[permLength], path[i]);
-//     }  // for ..unpermuted elements
-// }  // genPerms()
-
-template <typename Dist>
-double mst(vector<Cage>& cages, uint16_t startIndex, uint16_t endIndex, vector<CagePair>& res, Dist dist) {
+template <typename Dist, typename DistSq>
+double mst(vector<Cage>& cages,
+           uint16_t startIndex,
+           uint16_t endIndex,
+           vector<CagePair>& res,
+           Dist dist,
+           DistSq distSq) {
     // index mapped to i-startIndex
     // [startIndex,endIndex)
     if (startIndex == endIndex)
@@ -120,7 +111,7 @@ double mst(vector<Cage>& cages, uint16_t startIndex, uint16_t endIndex, vector<C
         for (uint16_t j = 0; j < endIndex - startIndex; ++j) {
             if (vis[j])
                 continue;
-            double newDis = dist(cages[startIndex + j], cages[startIndex + minNode]);
+            double newDis = distSq(cages[startIndex + j], cages[startIndex + minNode]);
             if (newDis < dis[j]) {
                 pre[j] = minNode;
                 dis[j] = newDis;
@@ -140,11 +131,12 @@ double nearestInsert(vector<Cage>& cages, vector<uint16_t>& res) {
     vector<bool> isIn(cages.size(), false);
     res.resize(cages.size() + 1);
     Cage::Mix dist;
+    Cage::MixSq distSq;
     if (cages.size() > 1) {
         double minDis = doubleInf;
         uint16_t cage = 1;
         for (uint16_t i = 1; i < cages.size(); ++i) {
-            double nowDis = dist(cages[0], cages[i]);
+            double nowDis = distSq(cages[0], cages[i]);
             if (nowDis < minDis) {
                 minDis = nowDis;
                 cage = i;
@@ -159,7 +151,7 @@ double nearestInsert(vector<Cage>& cages, vector<uint16_t>& res) {
     vector<uint16_t> nearest(cages.size(), 0);
     for (uint16_t i = 1; i < cages.size(); ++i) {
         if (!isIn[i]) {
-            nearest[i] = dist(cages[i], cages[0]) < dist(cages[i], cages[res[1]]) ? 0 : res[1];
+            nearest[i] = distSq(cages[i], cages[0]) < distSq(cages[i], cages[res[1]]) ? 0 : res[1];
         }
     }
 
@@ -169,7 +161,7 @@ double nearestInsert(vector<Cage>& cages, vector<uint16_t>& res) {
         for (uint16_t i = 1; i < cages.size(); ++i) {
             if (isIn[i])
                 continue;
-            double nowDis = dist(cages[i], cages[nearest[i]]);
+            double nowDis = distSq(cages[i], cages[nearest[i]]);
             if (nowDis < minDis) {
                 minDis = nowDis;
                 cage = i;
@@ -191,7 +183,7 @@ double nearestInsert(vector<Cage>& cages, vector<uint16_t>& res) {
         res[insertBefore] = cage;
         isIn[cage] = true;
         for (uint16_t i = 1; i < cages.size(); ++i) {
-            if ((!isIn[i]) && dist(cages[cage], cages[i]) < dist(cages[i], cages[nearest[i]])) {
+            if ((!isIn[i]) && distSq(cages[cage], cages[i]) < distSq(cages[i], cages[nearest[i]])) {
                 nearest[i] = cage;
             }
         }
@@ -212,6 +204,60 @@ double nearestInsert(vector<Cage>& cages, vector<uint16_t>& res) {
         len += dist(cages[res[i]], cages[res[i + 1]]);
     return len;
 }
+
+bool promising(vector<Cage>& cages, vector<uint16_t>& path, uint16_t permLength, double curLen, double& bestLen) {
+    double min1 = doubleInf, min2 = doubleInf;
+    Cage::Mix dist;
+    for (uint16_t i = permLength; i < cages.size(); ++i) {
+        min1 = min(min1, dist(cages[path[0]], cages[path[i]]));
+        min2 = min(min2, dist(cages[path[permLength - 1]], cages[path[i]]));
+    }
+#ifdef DEBUG_PROMISING
+    if (true)
+        return curLen + min1 + min2 < bestLen;
+#endif
+    if (cages.size() < permLength + 6U)
+        return curLen + min1 + min2 < bestLen;
+    vector<CagePair> temp;
+    double mstLen = mst(cages, permLength, uint16_t(cages.size()), temp, Cage::Mix(), Cage::MixSq());
+    return curLen + min1 + min2 + mstLen < bestLen;
+}
+
+void genPerms(vector<Cage>& cages,
+              vector<uint16_t>& ans,
+              double& bestLen,
+              vector<uint16_t>& path,
+              double curLen,
+              uint16_t permLength) {
+    Cage::Mix dist;
+    if (permLength == path.size()) {
+        // Do something with the path
+        curLen += dist(cages[path[0]], cages[path.back()]);
+        // check the path and see if it's better
+        if (curLen < bestLen) {
+            bestLen = curLen;
+            ans = path;
+        }
+        return;
+    }  // if ..complete path
+
+    if (!promising(cages, path, permLength, curLen, bestLen)) {
+        return;
+    }  // if ..not promising
+
+    // if estimate > opt, cut
+    // do mst on the rest
+    // only calc estimate when # unvisited >= 5
+
+    for (uint16_t i = permLength; i < path.size(); ++i) {
+        swap(path[permLength], path[i]);
+        curLen += dist(cages[path[permLength]], cages[path[permLength - 1]]);
+        // stop genPerm
+        genPerms(cages, ans, bestLen, path, curLen, permLength + 1);
+        curLen -= dist(cages[path[permLength]], cages[path[permLength - 1]]);
+        swap(path[permLength], path[i]);
+    }  // for ..unpermuted elements
+}  // genPerms()
 
 int main(int argc, char** argv) {
     ios_base::sync_with_stdio(false);
@@ -263,7 +309,7 @@ int main(int argc, char** argv) {
     }
     if (mode == Mode::MST) {
         vector<CagePair> res;
-        double len = mst(cages, 0, n, res, Cage::Distinguish());
+        double len = mst(cages, 0, n, res, Cage::Distinguish(), Cage::DistinguishSq());
         cout << len << "\n";
         for (int i = 0; i < n - 1; ++i) {
             cout << min(res[i].i, res[i].j) << " " << max(res[i].i, res[i].j) << '\n';
@@ -271,6 +317,15 @@ int main(int argc, char** argv) {
     } else if (mode == Mode::FASTTSP) {
         vector<uint16_t> res;
         double len = nearestInsert(cages, res);
+        cout << len << '\n';
+        for (uint16_t i = 0; i < n; ++i)
+            cout << res[i] << ' ';
+    } else {
+        vector<uint16_t> res;
+        double len = nearestInsert(cages, res);
+        vector<uint16_t> temp(res);
+        temp.pop_back();
+        genPerms(cages, res, len, temp, 0, 1);
         cout << len << '\n';
         for (uint16_t i = 0; i < n; ++i)
             cout << res[i] << ' ';

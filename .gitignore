@@ -3,3 +3,6 @@
 /my.out
 /transform
 /trans.txt
+*.o
+/zoo
+*.tar.gz
