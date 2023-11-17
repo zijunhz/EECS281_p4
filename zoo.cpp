@@ -186,70 +186,21 @@ class Solution {
 
 // this is for part B: https://stemlounge.com/animated-algorithms-for-the-traveling-salesman-problem/
 
-double farthestInsert(vector<Cage>& cages, vector<uint16_t>& res) {
-    vector<bool> vis(cages.size(), false);
-    vector<uint16_t> nearest(cages.size(), 0);
-    list<uint16_t> path;
-    path.push_back(0);
-    path.push_back(0);
-    vis[0] = true;
-    Cage::MixSq distSq;
-    Cage::Mix dist;
-    for (uint16_t count = 1; count < cages.size(); ++count) {
-        uint16_t nxt = 0;
-        double minDis = doubleInf;
-        for (uint16_t i = 1; i < cages.size(); ++i) {
-            if (vis[i])
-                continue;
-            double distNow = distSq(cages[i], cages[nearest[i]]);
-            if (distNow < minDis) {
-                minDis = distNow;
-                nxt = i;
-            }
-        }
-        vis[nxt] = true;
-        for (uint16_t i = 1; i < cages.size(); ++i) {
-            if ((!vis[i]) && distSq(cages[i], cages[nearest[i]]) < distSq(cages[i], cages[nxt])) {
-                nearest[i] = nxt;
-            }
-        }
-        auto toInsert = path.begin();
-        minDis = doubleInf;
-        for (auto it = path.begin(); next(it) != path.end(); ++it) {
-            double curDis = dist(cages[*it], cages[nxt]) + dist(cages[*(next(it))], cages[nxt]) -
-                            dist(cages[*it], cages[*next(it)]);
-            if (curDis < minDis) {
-                minDis = curDis;
-                toInsert = it;
-            }
-        }
-        path.insert(next(toInsert), nxt);
-    }
-    double len = 0;
-    res.reserve(cages.size() + 1);
-    for (auto v : path) {
-        if (res.size() > 0)
-            len += dist(cages[res.back()], cages[v]);
-        res.push_back(v);
-    }
-    res.pop_back();
-    return len;
-}
-
 double nearestInsert(vector<Cage>& cages, vector<uint16_t>& res) {
-    vector<uint16_t> nearest(cages.size(), 0);
     vector<uint16_t> left(cages.size() - 1, 0);
     iota(left.begin(), left.end(), 1);
     list<uint16_t> path;
     path.push_back(0);
     path.push_back(0);
+    vector<list<uint16_t>::iterator> nearest(cages.size(), path.begin());
     Cage::MixSq distSq;
     Cage::Mix dist;
+    int step = int(cages.size()) / 20 + 10;
     for (uint16_t count = 1; count < cages.size(); ++count) {
         uint16_t nxt = 0;
         double minDis = doubleInf;
         for (uint16_t i = 0; i < left.size(); ++i) {
-            double distNow = distSq(cages[left[i]], cages[nearest[left[i]]]);
+            double distNow = distSq(cages[left[i]], cages[*nearest[left[i]]]);
             if (distNow < minDis) {
                 minDis = distNow;
                 nxt = i;
@@ -259,14 +210,14 @@ double nearestInsert(vector<Cage>& cages, vector<uint16_t>& res) {
         left[nxt] = left.back();
         left.pop_back();
         nxt = temp;
-        for (uint16_t i = 0; i < left.size(); ++i) {
-            if (distSq(cages[left[i]], cages[nearest[left[i]]]) > distSq(cages[left[i]], cages[nxt])) {
-                nearest[left[i]] = nxt;
-            }
-        }
+
         auto toInsert = path.begin();
         minDis = doubleInf;
-        for (auto it = path.begin(); next(it) != path.end(); ++it) {
+        auto it = nearest[nxt];
+        for (int i = 0; i < step && it != path.begin(); ++i)
+            --it;
+
+        for (int i = 0; i < (step << 1) && next(it) != path.end(); ++i, ++it) {
             double curDis = dist(cages[*it], cages[nxt]) + dist(cages[*(next(it))], cages[nxt]) -
                             dist(cages[*it], cages[*next(it)]);
             if (curDis < minDis) {
@@ -275,6 +226,12 @@ double nearestInsert(vector<Cage>& cages, vector<uint16_t>& res) {
             }
         }
         path.insert(next(toInsert), nxt);
+
+        for (uint16_t i = 0; i < left.size(); ++i) {
+            if (distSq(cages[left[i]], cages[*nearest[left[i]]]) > distSq(cages[left[i]], cages[nxt])) {
+                nearest[left[i]] = toInsert;
+            }
+        }
     }
     double len = 0;
     res.reserve(cages.size() + 1);
