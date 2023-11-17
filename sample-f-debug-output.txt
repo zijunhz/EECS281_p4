@@ -1,19 +1,18 @@
-I ran this with -m OPTTSP < sample-f.txt, and saved additional output.
+I ran this with -m OPTTSP < sample-e.txt, and saved additional output.
 To make things easier to reproduce, I started with the beginning path as
 shown below, and the "best path length" was my Part B result.  In the
 table, the "PL" column is permLength.
 
 To create the table, the code looks something like this:
 // Do this once, in main()
-cerr << fixed << showpoint << setprecision(2) << boolalpha;
+cerr << fixed << showpoint << setprecision(2);
 
 // Do this inside of promising:
 for (size_t i = 0; i < path.size(); ++i)
     cerr << setw(2) << path[i] << ' ';
 cerr << setw(4) << permLength << setw(10) << curCost;
 cerr << setw(10) << arm1Len << setw(10) << arm2Len;
-cerr << setw(10) << mstCost << setw(10) << totalEst << "  ";
-cerr << (curCost + arm1Len + arm2Len + mstCost) < bestCost << '\n';
+cerr << setw(10) << mstCost << setw(10) << totalEst << "  " << promise << '\n';
 
 Make sure you don't submit this code to the autograder!  The largest
 test cases will produce hundreds of thousands of lines of output, and
@@ -22,7 +21,7 @@ limit on file size).
 
 Some students have reported that Xcode won't allow this; apparently it's
 producing too much error output.  Just run it in the terminal like this:
-    ./donuts -m OPTTSP < sample-f.txt >& my-debug-output.txt
+    ./zoo -m OPTTSP < sample-e.txt >& my-debug-output.txt
 The ">&" means all output is redirected to the file, even error output.
 
 YOU MUST USE THESE FOR YOUR "Part B" output to get the same results.

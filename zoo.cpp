@@ -83,6 +83,7 @@ class Solution {
     double bestLen;
     double curLen;
     vector<vector<double>> adjMat;
+    vector<double> dis;
     template <typename Dist, typename DistSq>
     double mst(Dist dist, DistSq distSq) {
         if (cages.size() <= 1)
@@ -133,35 +134,32 @@ class Solution {
         // [startIndex,endIndex)
         if (startIndex == cages.size())
             return 0;
+        vector<uint16_t> path(this->path.begin() + startIndex, this->path.end());
         uint16_t n = uint16_t(cages.size()) - startIndex;
-        vector<uint16_t> pre(n, 0);
-        vector<double> dis(n, doubleInf);
-        vector<bool> vis(n, false);
-        dis[0] = 0;
+        for (auto v : path) {
+            dis[v] = doubleInf;
+        }
+        dis[path[0]] = 0;
         double len = 0;
+        double minDis = 0;
+        uint16_t minNode = 0;
         for (uint16_t count = 0; count < n; ++count) {
-            double minDis = doubleInf;
-            uint16_t minNode = 0;
-            for (uint16_t j = 0; j < n; ++j)
-                if ((!vis[j]) && dis[j] < minDis) {
-                    minDis = dis[j];
-                    minNode = j;
-                }
             if (minDis == doubleInf) {
                 cerr << "Cannot construct MST";
                 exit(1);
             }
-            vis[minNode] = true;
-            if (count > 0) {
-                len += adjMat[path[minNode + startIndex]][path[pre[minNode] + startIndex]];
-            }
-            for (uint16_t j = 0; j < n; ++j) {
-                if (vis[j])
-                    continue;
-                double newDis = adjMat[path[startIndex + j]][path[startIndex + minNode]];
-                if (newDis < dis[j]) {
-                    pre[j] = minNode;
-                    dis[j] = newDis;
+            swap(path[minNode], path.back());
+            minNode = path.back();
+            path.pop_back();
+            len += dis[minNode];
+            minDis = doubleInf;
+            for (auto it = path.begin(); it != path.end(); ++it) {
+                if (adjMat[*it][minNode] < dis[*it]) {
+                    dis[*it] = adjMat[*it][minNode];
+                }
+                if (dis[*it] < minDis) {
+                    minDis = dis[*it];
+                    minNode = uint16_t(it - path.begin());
                 }
             }
         }
@@ -169,19 +167,6 @@ class Solution {
     }
 
     bool promising(uint16_t permLength) {
-        // if (cages.size() < permLength + 3U)
-        //     return true;
-
-        // vector<double> startV;
-        // startV.reserve(cages.size() - permLength);
-        // vector<double> endV;
-        // endV.reserve(cages.size() - permLength);
-        // for (uint16_t i = permLength; i < cages.size(); ++i) {
-        //     startV.push_back(adjMat[path[0]][path[i]]);
-        //     endV.push_back(adjMat[path[permLength - 1]][path[i]]);
-        // }
-        // double min1 = *min_element(startV.begin(), startV.end()), min2 = *min_element(endV.begin(), endV.end());
-
         double min1 = doubleInf, min2 = doubleInf;
         for (uint16_t i = permLength; i < cages.size(); ++i) {
             min1 = min(min1, adjMat[path[0]][path[i]]);  // dist(cages[], cages[]));
@@ -192,12 +177,9 @@ class Solution {
         if (true)
             return curLen + min1 + min2 < bestLen;
 #endif
-        return (cages.size() < permLength + 6U) ? curLen + min1 + min2 < bestLen
-                                                : curLen + min1 + min2 + mstLocal(permLength) < bestLen;
-        //  if (cages.size() < permLength + 6U)
-        //     return curLen + min1 + min2 < bestLen;
-        // double mstLen = mstLocal(permLength);
-        // return curLen + min1 + min2 + mstLen < bestLen;
+        return curLen + min1 + min2 + mstLocal(permLength) < bestLen;
+        // return (cages.size() < permLength + 3U) ? curLen + min1 + min2 < bestLen
+        //                                         : curLen + min1 + min2 + mstLocal(permLength) < bestLen;
     }
 
     void genPerms(uint16_t permLength) {
@@ -472,6 +454,7 @@ int main(int argc, char** argv) {
             cout << res[i] << ' ';
     } else {
         srand((unsigned)time(NULL));
+        sol.dis.resize(n);
         sol.adjMat = vector<vector<double>>(n, vector<double>(n, doubleInf));
         sol.adjMat = vector<vector<double>>(n, vector<double>(n, doubleInf));
         Cage::Mix dist;
