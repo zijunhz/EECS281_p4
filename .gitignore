@@ -7,6 +7,6 @@
 /zoo
 *.tar.gz
 /zoo_valgrind
-/zoo_profile
+/zoo_profile*
 /scratch.txt
 /tests

@@ -119,12 +119,6 @@ class Solution {
                     dis[path[j]] = newDis;
                 }
             }
-#ifdef DEBUG_MST
-            cout << "--------\n";
-            for (uint16_t i = 0; i < endIndex - startIndex; ++i) {
-                cout << "    " << dis[i] << "\n";
-            }
-#endif
         }
         return len;
     }
@@ -132,36 +126,34 @@ class Solution {
     double mstLocal(uint16_t startIndex) {
         // index mapped to i-startIndex
         // [startIndex,endIndex)
-        if (startIndex == cages.size())
+        if (startIndex + 1U >= cages.size())
             return 0;
-        vector<uint16_t> path(this->path.begin() + startIndex, this->path.end());
+        vector<uint16_t> left(path.begin() + startIndex, path.end());
         uint16_t n = uint16_t(cages.size()) - startIndex;
-        for (auto v : path) {
+        for (auto v : left) {
             dis[v] = doubleInf;
         }
-        dis[path[0]] = 0;
+        dis[left[0]] = 0;
         double len = 0;
         double minDis = 0;
         uint16_t minNode = 0;
         for (uint16_t count = 0; count < n; ++count) {
-            if (minDis == doubleInf) {
-                cerr << "Cannot construct MST";
-                exit(1);
-            }
-            swap(path[minNode], path.back());
-            minNode = path.back();
-            path.pop_back();
-            len += dis[minNode];
+            swap(left[minNode], left.back());
+            minNode = left.back();
+            left.pop_back();
+            len += minDis;
             minDis = doubleInf;
-            for (auto it = path.begin(); it != path.end(); ++it) {
+            uint16_t nxt = 0;
+            for (auto it = left.begin(); it != left.end(); ++it) {
                 if (adjMat[*it][minNode] < dis[*it]) {
                     dis[*it] = adjMat[*it][minNode];
                 }
                 if (dis[*it] < minDis) {
                     minDis = dis[*it];
-                    minNode = uint16_t(it - path.begin());
+                    nxt = uint16_t(it - left.begin());
                 }
             }
+            minNode = nxt;
         }
         return len;
     }
@@ -456,7 +448,6 @@ int main(int argc, char** argv) {
         srand((unsigned)time(NULL));
         sol.dis.resize(n);
         sol.adjMat = vector<vector<double>>(n, vector<double>(n, doubleInf));
-        sol.adjMat = vector<vector<double>>(n, vector<double>(n, doubleInf));
         Cage::Mix dist;
         for (uint16_t i = 0; i < n; ++i) {
             for (uint16_t j = 0; j < i; ++j) {
@@ -471,6 +462,8 @@ int main(int argc, char** argv) {
             len = min(len, sol.randomFarthestInsert());
         vector<uint16_t> res;
         len = min(farthestInsert(sol.cages, res, 1), len);
+        if (n != res.size())
+            cerr << "WTF\n";
         sol.bestLen = len;
         sol.curLen = 0;
         sol.path = res;

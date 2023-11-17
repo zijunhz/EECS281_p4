@@ -5,7 +5,7 @@ for count in range(0, 10):
         f'./tests/test-{count}-{"MST" if count<4 else "OPTTSP" if count<8 else "FASTTSP"}.txt',
         "w",
     ) as file:
-        n = 19
+        n = 25
         file.write(f"{n}\n")
         file.write(f"0 {randint(-10,0)}\n")
         file.write(f"{randint(-10,0)} 0\n")
