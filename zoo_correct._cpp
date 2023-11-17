@@ -82,39 +82,47 @@ class Solution {
     double bestLen;
     double curLen;
     vector<vector<double>> adjMat;
+    vector<vector<double>> sqrtAdjMat;
     template <typename Dist, typename DistSq>
-    double mst(Dist dist, DistSq distSq) {
-        if (cages.size() <= 1)
+    double mst(uint16_t startIndex, uint16_t endIndex, Dist dist, DistSq distSq, bool needRes) {
+        // index mapped to i-startIndex
+        // [startIndex,endIndex)
+        if (startIndex == endIndex)
             return 0;
-        mstRes.reserve(cages.size());
-        vector<uint16_t> pre(cages.size(), 0);
-        vector<double> dis(cages.size(), doubleInf);
+        if (needRes)
+            mstRes.reserve(endIndex - startIndex);
+        vector<uint16_t> pre(endIndex - startIndex, 0);
+        vector<double> dis(endIndex - startIndex, doubleInf);
+        vector<bool> vis(endIndex - startIndex, false);
         dis[0] = 0;
         double len = 0;
-        for (uint16_t count = 0; count < cages.size(); ++count) {
+        for (uint16_t count = 0; count < endIndex - startIndex; ++count) {
             double minDis = doubleInf;
             uint16_t minNode = 0;
-            for (uint16_t j = 0; j < path.size(); ++j)
-                if (dis[path[j]] < minDis) {
-                    minDis = dis[path[j]];
+            for (uint16_t j = 0; j < endIndex - startIndex; ++j)
+                if ((!vis[j]) && dis[j] < minDis) {
+                    minDis = dis[j];
                     minNode = j;
                 }
             if (minDis == doubleInf) {
                 cerr << "Cannot construct MST";
                 exit(1);
             }
-            swap(path[minNode], path.back());
-            minNode = path.back();
-            path.pop_back();
+            vis[minNode] = true;
             if (count > 0) {
-                mstRes.emplace_back(CagePair(minNode, pre[minNode]));
-                len += dist(cages[minNode], cages[pre[minNode]]);
+                if (needRes)
+                    mstRes.emplace_back(CagePair(path[minNode + startIndex], path[pre[minNode] + startIndex]));
+                len += needRes ? dist(cages[path[minNode + startIndex]], cages[path[pre[minNode] + startIndex]])
+                               : sqrt(adjMat[path[minNode + startIndex]][path[pre[minNode] + startIndex]]);
             }
-            for (uint16_t j = 0; j < path.size(); ++j) {
-                double newDis = distSq(cages[path[j]], cages[minNode]);
-                if (newDis < dis[path[j]]) {
-                    pre[path[j]] = minNode;
-                    dis[path[j]] = newDis;
+            for (uint16_t j = 0; j < endIndex - startIndex; ++j) {
+                if (vis[j])
+                    continue;
+                double newDis = needRes ? distSq(cages[path[startIndex + j]], cages[path[startIndex + minNode]])
+                                        : adjMat[path[startIndex + j]][path[startIndex + minNode]];
+                if (newDis < dis[j]) {
+                    pre[j] = minNode;
+                    dis[j] = newDis;
                 }
             }
 #ifdef DEBUG_MST
@@ -127,21 +135,20 @@ class Solution {
         return len;
     }
 
-    double mstLocal(uint16_t startIndex) {
+    double mstLocal(uint16_t startIndex, uint16_t endIndex) {
         // index mapped to i-startIndex
         // [startIndex,endIndex)
-        if (startIndex == cages.size())
+        if (startIndex == endIndex)
             return 0;
-        uint16_t n = uint16_t(cages.size()) - startIndex;
-        vector<uint16_t> pre(n, 0);
-        vector<double> dis(n, doubleInf);
-        vector<bool> vis(n, false);
+        vector<uint16_t> pre(endIndex - startIndex, 0);
+        vector<double> dis(endIndex - startIndex, doubleInf);
+        vector<bool> vis(endIndex - startIndex, false);
         dis[0] = 0;
         double len = 0;
-        for (uint16_t count = 0; count < n; ++count) {
+        for (uint16_t count = 0; count < endIndex - startIndex; ++count) {
             double minDis = doubleInf;
             uint16_t minNode = 0;
-            for (uint16_t j = 0; j < n; ++j)
+            for (uint16_t j = 0; j < endIndex - startIndex; ++j)
                 if ((!vis[j]) && dis[j] < minDis) {
                     minDis = dis[j];
                     minNode = j;
@@ -152,9 +159,9 @@ class Solution {
             }
             vis[minNode] = true;
             if (count > 0) {
-                len += adjMat[path[minNode + startIndex]][path[pre[minNode] + startIndex]];
+                len += sqrtAdjMat[path[minNode + startIndex]][path[pre[minNode] + startIndex]];
             }
-            for (uint16_t j = 0; j < n; ++j) {
+            for (uint16_t j = 0; j < endIndex - startIndex; ++j) {
                 if (vis[j])
                     continue;
                 double newDis = adjMat[path[startIndex + j]][path[startIndex + minNode]];
@@ -163,18 +170,25 @@ class Solution {
                     dis[j] = newDis;
                 }
             }
+#ifdef DEBUG_MST
+            cout << "--------\n";
+            for (uint16_t i = 0; i < endIndex - startIndex; ++i) {
+                cout << "    " << dis[i] << "\n";
+            }
+#endif
         }
         return len;
     }
 
     bool promising(uint16_t permLength) {
-        // if (cages.size() < permLength + 3U)
-        //     return true;
+        // return true;
+        // return curLen < bestLen;
         double min1 = doubleInf, min2 = doubleInf;
         for (uint16_t i = permLength; i < cages.size(); ++i) {
-            min1 = min(min1, adjMat[path[0]][path[i]]);  // dist(cages[], cages[]));
-            min2 = min(min2,
-                       adjMat[path[permLength - 1]][path[i]]);  // dist(cages[path[permLength - 1]], cages[path[i]]));
+            min1 = min(min1, sqrtAdjMat[path[0]][path[i]]);  // dist(cages[], cages[]));
+            min2 =
+                min(min2,
+                    sqrtAdjMat[path[permLength - 1]][path[i]]);  // dist(cages[path[permLength - 1]], cages[path[i]]));
         }
 #ifdef DEBUG_PROMISING
         if (true)
@@ -182,24 +196,24 @@ class Solution {
 #endif
         if (cages.size() < permLength + 6U)
             return curLen + min1 + min2 < bestLen;
-        double mstLen = mstLocal(permLength);
+        double mstLen = mstLocal(permLength, uint16_t(cages.size()));
         return curLen + min1 + min2 + mstLen < bestLen;
     }
 
     void genPerms(uint16_t permLength) {
         if (permLength == path.size()) {
             // Do something with the path
-            curLen += adjMat[path[0]][path[permLength - 1]];  // dist(cages[path[0]], cages[path.back()]);
+            curLen += sqrtAdjMat[path[0]][path.back()];  // dist(cages[path[0]], cages[path.back()]);
             // check the path and see if it's better
             if (curLen < bestLen) {
                 bestLen = curLen;
                 pathRes = path;
             }
-            curLen -= adjMat[path[0]][path[permLength - 1]];  // dist(cages[path[0]], cages[path.back()]);
+            curLen -= sqrtAdjMat[path[0]][path.back()];  // dist(cages[path[0]], cages[path.back()]);
             return;
         }  // if ..complete path
 
-        if (permLength > 2 && permLength < cages.size() - 1 && (!promising(permLength))) {
+        if (!promising(permLength)) {
             return;
         }  // if ..not promising
 
@@ -209,65 +223,15 @@ class Solution {
 
         for (uint16_t i = permLength; i < path.size(); ++i) {
             swap(path[permLength], path[i]);
-            curLen += adjMat[path[permLength]]
-                            [path[permLength - 1]];  // dist(cages[path[permLength]], cages[path[permLength - 1]]);
+            curLen += sqrtAdjMat[path[permLength]]
+                                [path[permLength - 1]];  // dist(cages[path[permLength]], cages[path[permLength - 1]]);
             // stop genPerm
             genPerms(permLength + 1);
-            curLen -= adjMat[path[permLength]]
-                            [path[permLength - 1]];  // dist(cages[path[permLength]], cages[path[permLength - 1]]);
+            curLen -= sqrtAdjMat[path[permLength]]
+                                [path[permLength - 1]];  // dist(cages[path[permLength]], cages[path[permLength - 1]]);
             swap(path[permLength], path[i]);
         }  // for ..unpermuted elements
     }      // genPerms()
-
-    double nearestInsert() {
-        vector<uint16_t> left(cages.size() - 1, 0);
-        iota(left.begin(), left.end(), 1);
-        list<uint16_t> path;
-        path.push_back(0);
-        path.push_back(0);
-        vector<list<uint16_t>::iterator> nearest(cages.size(), path.begin());
-        vector<double> distNow(cages.size(), doubleInf);
-        distNow[0] = 0;
-        auto curV = path.begin();
-        // int step = int(cages.size()) / 3 + 2;
-        for (uint16_t count = 1; count < cages.size(); ++count) {
-            uint16_t nxt = 0;
-            double maxDis = doubleInf;
-            for (uint16_t i = 0; i < left.size(); ++i) {
-                // double distNow = distSq(cages[left[i]], cages[*nearest[left[i]]]);
-                double challenger = adjMat[left[i]][*curV];  // distSq(cages[left[i]], cages[*curV]);
-                if (distNow[left[i]] > challenger) {
-                    nearest[left[i]] = curV;
-                    distNow[left[i]] = challenger;
-                }
-                if (distNow[left[i]] < maxDis) {
-                    maxDis = distNow[left[i]];
-                    nxt = i;
-                }
-            }
-            uint16_t temp = left[nxt];
-            left[nxt] = left.back();
-            left.pop_back();
-            nxt = temp;
-
-            auto toInsert = path.begin();
-            maxDis = doubleInf;
-            for (auto it = path.begin(), nxtIt = next(it); nxtIt != path.end(); it = nxtIt++) {
-                double curDis = adjMat[*it][nxt] + adjMat[*nxtIt][nxt] - adjMat[*it][*nxtIt];
-                if (curDis < maxDis) {
-                    maxDis = curDis;
-                    toInsert = it;
-                }
-            }
-            path.insert(next(toInsert), nxt);
-            curV = toInsert;
-        }
-        double len = 0;
-        for (auto it = path.begin(), nxtIt = next(it); nxtIt != path.end(); it = nxtIt++) {
-            len += adjMat[*it][*nxtIt];  // dist(cages[*it], cages[*nxtIt]);
-        }
-        return len;
-    }
 };
 
 // this is for part B: https://stemlounge.com/animated-algorithms-for-the-traveling-salesman-problem/
@@ -343,6 +307,75 @@ double farthestInsert(vector<Cage>& cages, vector<uint16_t>& res, int ratio) {
     return len;
 }
 
+double nearestInsert(vector<Cage>& cages, vector<uint16_t>& res) {
+    vector<uint16_t> left(cages.size() - 1, 0);
+    iota(left.begin(), left.end(), 1);
+    list<uint16_t> path;
+    path.push_back(0);
+    path.push_back(0);
+    vector<list<uint16_t>::iterator> nearest(cages.size(), path.begin());
+    vector<double> distNow(cages.size(), doubleInf);
+    distNow[0] = 0;
+    Cage::MixSq distSq;
+    Cage::Mix dist;
+    auto curV = path.begin();
+    // int step = int(cages.size()) / 3 + 2;
+    for (uint16_t count = 1; count < cages.size(); ++count) {
+        uint16_t nxt = 0;
+        double maxDis = doubleInf;
+        for (uint16_t i = 0; i < left.size(); ++i) {
+            // double distNow = distSq(cages[left[i]], cages[*nearest[left[i]]]);
+            double challenger = distSq(cages[left[i]], cages[*curV]);
+            if (distNow[left[i]] > challenger) {
+                nearest[left[i]] = curV;
+                distNow[left[i]] = challenger;
+            }
+            if (distNow[left[i]] < maxDis) {
+                maxDis = distNow[left[i]];
+                nxt = i;
+            }
+        }
+        uint16_t temp = left[nxt];
+        left[nxt] = left.back();
+        left.pop_back();
+        nxt = temp;
+
+        auto toInsert = path.begin();
+        maxDis = doubleInf;
+        for (auto it = path.begin(), nxtIt = next(it); nxtIt != path.end(); it = nxtIt++) {
+            double curDis =
+                dist(cages[*it], cages[nxt]) + dist(cages[*nxtIt], cages[nxt]) - dist(cages[*it], cages[*nxtIt]);
+            if (curDis < maxDis) {
+                maxDis = curDis;
+                toInsert = it;
+            }
+        }
+        // auto it = nearest[nxt];
+        // for (int i = 0; i < step && it != path.begin(); ++i)
+        //     --it;
+
+        // for (int i = 0; i < (step << 1) && next(it) != path.end(); ++i, ++it) {
+        //     double curDis = dist(cages[*it], cages[nxt]) + dist(cages[*(next(it))], cages[nxt]) -
+        //                     dist(cages[*it], cages[*next(it)]);
+        //     if (curDis < maxDis) {
+        //         maxDis = curDis;
+        //         toInsert = it;
+        //     }
+        // }
+        path.insert(next(toInsert), nxt);
+        curV = toInsert;
+    }
+    double len = 0;
+    res.reserve(cages.size() + 1);
+    for (auto v : path) {
+        if (res.size() > 0)
+            len += dist(cages[res.back()], cages[v]);
+        res.push_back(v);
+    }
+    res.pop_back();
+    return len;
+}
+
 int main(int argc, char** argv) {
     ios_base::sync_with_stdio(false);
     cin.tie(0);
@@ -394,7 +427,7 @@ int main(int argc, char** argv) {
     if (mode == Mode::MST) {
         sol.path.resize(n);
         iota(sol.path.begin(), sol.path.end(), 0);
-        double len = sol.mst(Cage::Distinguish(), Cage::DistinguishSq());
+        double len = sol.mst(0, n, Cage::Distinguish(), Cage::DistinguishSq(), true);
         cout << len << "\n";
         for (int i = 0; i < n - 1; ++i) {
             cout << min(sol.mstRes[i].i, sol.mstRes[i].j) << " " << max(sol.mstRes[i].i, sol.mstRes[i].j) << '\n';
@@ -406,25 +439,27 @@ int main(int argc, char** argv) {
         for (uint16_t i = 0; i < n; ++i)
             cout << res[i] << ' ';
     } else {
-        sol.adjMat = vector<vector<double>>(n, vector<double>(n, doubleInf));
-        sol.adjMat = vector<vector<double>>(n, vector<double>(n, doubleInf));
-        Cage::Mix dist;
-        for (uint16_t i = 0; i < n; ++i) {
-            for (uint16_t j = 0; j < i; ++j) {
-                sol.adjMat[i][j] = dist(sol.cages[i], sol.cages[j]);
-            }
-            for (uint16_t j = i + 1; j < n; ++j) {
-                sol.adjMat[i][j] = dist(sol.cages[i], sol.cages[j]);
-            }
-        }
-        double len = sol.nearestInsert();
         vector<uint16_t> res;
+        double len = nearestInsert(sol.cages, res);
+        res.clear();
         len = min(farthestInsert(sol.cages, res, 1), len);
         sol.bestLen = len;
         sol.curLen = 0;
         sol.path = res;
         sol.pathRes = res;
-
+        sol.adjMat = vector<vector<double>>(n, vector<double>(n, doubleInf));
+        sol.sqrtAdjMat = vector<vector<double>>(n, vector<double>(n, doubleInf));
+        Cage::MixSq dist;
+        for (uint16_t i = 0; i < n; ++i) {
+            for (uint16_t j = 0; j < i; ++j) {
+                sol.adjMat[i][j] = dist(sol.cages[i], sol.cages[j]);
+                sol.sqrtAdjMat[i][j] = sqrt(sol.adjMat[i][j]);
+            }
+            for (uint16_t j = i + 1; j < n; ++j) {
+                sol.adjMat[i][j] = dist(sol.cages[i], sol.cages[j]);
+                sol.sqrtAdjMat[i][j] = sqrt(sol.adjMat[i][j]);
+            }
+        }
         sol.genPerms(1);
         cout << sol.bestLen << '\n';
         for (uint16_t i = 0; i < n; ++i)
