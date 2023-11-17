@@ -199,22 +199,24 @@ double farthestInsert(vector<Cage>& cages, vector<uint16_t>& res) {
     path.push_back(0);
     path.push_back(0);
     vector<list<uint16_t>::iterator> nearest(cages.size(), path.begin());
+    vector<double> distNow(cages.size(), doubleInf);
+    distNow[0] = 0;
     Cage::MixSq distSq;
     Cage::Mix dist;
     auto curV = path.begin();
-    int step = int(cages.size()) / 10 + 2;
+    // int step = int(cages.size()) / 3 + 2;
     for (uint16_t count = 1; count < cages.size(); ++count) {
         uint16_t nxt = 0;
         double maxDis = 0;
         for (uint16_t i = 0; i < left.size(); ++i) {
-            double distNow = distSq(cages[left[i]], cages[*nearest[left[i]]]);
+            // double distNow = distSq(cages[left[i]], cages[*nearest[left[i]]]);
             double challenger = distSq(cages[left[i]], cages[*curV]);
-            if (distNow > challenger) {
+            if (distNow[left[i]] > challenger) {
                 nearest[left[i]] = curV;
-                distNow = challenger;
+                distNow[left[i]] = challenger;
             }
-            if (distNow > maxDis) {
-                maxDis = distNow;
+            if (distNow[left[i]] > maxDis) {
+                maxDis = distNow[left[i]];
                 nxt = i;
             }
         }
@@ -225,18 +227,26 @@ double farthestInsert(vector<Cage>& cages, vector<uint16_t>& res) {
 
         auto toInsert = path.begin();
         maxDis = doubleInf;
-        auto it = nearest[nxt];
-        for (int i = 0; i < step && it != path.begin(); ++i)
-            --it;
-
-        for (int i = 0; i < (step << 1) && next(it) != path.end(); ++i, ++it) {
-            double curDis = dist(cages[*it], cages[nxt]) + dist(cages[*(next(it))], cages[nxt]) -
-                            dist(cages[*it], cages[*next(it)]);
+        for (auto it = path.begin(), nxtIt = next(it); nxtIt != path.end(); it = nxtIt++) {
+            double curDis =
+                dist(cages[*it], cages[nxt]) + dist(cages[*nxtIt], cages[nxt]) - dist(cages[*it], cages[*nxtIt]);
             if (curDis < maxDis) {
                 maxDis = curDis;
                 toInsert = it;
             }
         }
+        // auto it = nearest[nxt];
+        // for (int i = 0; i < step && it != path.begin(); ++i)
+        //     --it;
+
+        // for (int i = 0; i < (step << 1) && next(it) != path.end(); ++i, ++it) {
+        //     double curDis = dist(cages[*it], cages[nxt]) + dist(cages[*(next(it))], cages[nxt]) -
+        //                     dist(cages[*it], cages[*next(it)]);
+        //     if (curDis < maxDis) {
+        //         maxDis = curDis;
+        //         toInsert = it;
+        //     }
+        // }
         path.insert(next(toInsert), nxt);
         curV = toInsert;
     }
