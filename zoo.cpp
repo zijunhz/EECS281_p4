@@ -109,7 +109,7 @@ class Solution {
             vis[minNode] = true;
             if (count > 0) {
                 if (needRes)
-                    mstRes.push_back(CagePair(path[minNode + startIndex], path[pre[minNode] + startIndex]));
+                    mstRes.emplace_back(CagePair(path[minNode + startIndex], path[pre[minNode] + startIndex]));
                 len += dist(cages[path[minNode + startIndex]], cages[path[pre[minNode] + startIndex]]);
             }
             for (uint16_t j = 0; j < endIndex - startIndex; ++j) {
@@ -184,6 +184,65 @@ class Solution {
 };
 
 // this is for part B: https://stemlounge.com/animated-algorithms-for-the-traveling-salesman-problem/
+
+double farthestInsert(vector<Cage>& cages, vector<uint16_t>& res) {
+    vector<uint16_t> left(cages.size() - 1, 0);
+    iota(left.begin(), left.end(), 1);
+    list<uint16_t> path;
+    path.push_back(0);
+    path.push_back(0);
+    vector<list<uint16_t>::iterator> nearest(cages.size(), path.begin());
+    Cage::MixSq distSq;
+    Cage::Mix dist;
+    auto curV = path.begin();
+    int step = int(cages.size()) / 10 + 2;
+    for (uint16_t count = 1; count < cages.size(); ++count) {
+        uint16_t nxt = 0;
+        double maxDis = 0;
+        for (uint16_t i = 0; i < left.size(); ++i) {
+            double distNow = distSq(cages[left[i]], cages[*nearest[left[i]]]);
+            double challenger = distSq(cages[left[i]], cages[*curV]);
+            if (distNow > challenger) {
+                nearest[left[i]] = curV;
+                distNow = challenger;
+            }
+            if (distNow > maxDis) {
+                maxDis = distNow;
+                nxt = i;
+            }
+        }
+        uint16_t temp = left[nxt];
+        left[nxt] = left.back();
+        left.pop_back();
+        nxt = temp;
+
+        auto toInsert = path.begin();
+        maxDis = doubleInf;
+        auto it = nearest[nxt];
+        for (int i = 0; i < step && it != path.begin(); ++i)
+            --it;
+
+        for (int i = 0; i < (step << 1) && next(it) != path.end(); ++i, ++it) {
+            double curDis = dist(cages[*it], cages[nxt]) + dist(cages[*(next(it))], cages[nxt]) -
+                            dist(cages[*it], cages[*next(it)]);
+            if (curDis < maxDis) {
+                maxDis = curDis;
+                toInsert = it;
+            }
+        }
+        path.insert(next(toInsert), nxt);
+        curV = toInsert;
+    }
+    double len = 0;
+    res.reserve(cages.size() + 1);
+    for (auto v : path) {
+        if (res.size() > 0)
+            len += dist(cages[res.back()], cages[v]);
+        res.push_back(v);
+    }
+    res.pop_back();
+    return len;
+}
 
 double nearestInsert(vector<Cage>& cages, vector<uint16_t>& res) {
     vector<uint16_t> left(cages.size() - 1, 0);
@@ -286,7 +345,7 @@ int main(int argc, char** argv) {
     for (uint16_t i = 0; i < n; ++i) {
         int x, y;
         cin >> x >> y;
-        sol.cages.push_back(Cage(x, y));
+        sol.cages.emplace_back(Cage(x, y));
 #ifdef DEBUG_INPUT
         cages.back().print();
 #endif
@@ -301,13 +360,13 @@ int main(int argc, char** argv) {
         }
     } else if (mode == Mode::FASTTSP) {
         vector<uint16_t> res;
-        double len = nearestInsert(sol.cages, res);
+        double len = farthestInsert(sol.cages, res);
         cout << len << '\n';
         for (uint16_t i = 0; i < n; ++i)
             cout << res[i] << ' ';
     } else {
         vector<uint16_t> res;
-        double len = nearestInsert(sol.cages, res);
+        double len = farthestInsert(sol.cages, res);
         sol.bestLen = len;
         sol.curLen = 0;
         sol.path = res;
