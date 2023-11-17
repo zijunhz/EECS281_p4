@@ -186,7 +186,7 @@ class Solution {
 
 // this is for part B: https://stemlounge.com/animated-algorithms-for-the-traveling-salesman-problem/
 
-double farthest(vector<Cage>& cages, vector<uint16_t>& res) {
+double farthestInsert(vector<Cage>& cages, vector<uint16_t>& res) {
     vector<bool> vis(cages.size(), false);
     vector<uint16_t> nearest(cages.size(), 0);
     list<uint16_t> path;
@@ -237,30 +237,31 @@ double farthest(vector<Cage>& cages, vector<uint16_t>& res) {
 }
 
 double nearestInsert(vector<Cage>& cages, vector<uint16_t>& res) {
-    vector<bool> vis(cages.size(), false);
     vector<uint16_t> nearest(cages.size(), 0);
+    vector<uint16_t> left(cages.size() - 1, 0);
+    iota(left.begin(), left.end(), 1);
     list<uint16_t> path;
     path.push_back(0);
     path.push_back(0);
-    vis[0] = true;
     Cage::MixSq distSq;
     Cage::Mix dist;
     for (uint16_t count = 1; count < cages.size(); ++count) {
         uint16_t nxt = 0;
         double minDis = doubleInf;
-        for (uint16_t i = 1; i < cages.size(); ++i) {
-            if (vis[i])
-                continue;
-            double distNow = distSq(cages[i], cages[nearest[i]]);
+        for (uint16_t i = 0; i < left.size(); ++i) {
+            double distNow = distSq(cages[left[i]], cages[nearest[left[i]]]);
             if (distNow < minDis) {
                 minDis = distNow;
                 nxt = i;
             }
         }
-        vis[nxt] = true;
-        for (uint16_t i = 1; i < cages.size(); ++i) {
-            if ((!vis[i]) && distSq(cages[i], cages[nearest[i]]) > distSq(cages[i], cages[nxt])) {
-                nearest[i] = nxt;
+        uint16_t temp = left[nxt];
+        left[nxt] = left.back();
+        left.pop_back();
+        nxt = temp;
+        for (uint16_t i = 0; i < left.size(); ++i) {
+            if (distSq(cages[left[i]], cages[nearest[left[i]]]) > distSq(cages[left[i]], cages[nxt])) {
+                nearest[left[i]] = nxt;
             }
         }
         auto toInsert = path.begin();

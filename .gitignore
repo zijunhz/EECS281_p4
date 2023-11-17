@@ -7,3 +7,4 @@
 /zoo
 *.tar.gz
 /zoo_valgrind
+/zoo_profile
