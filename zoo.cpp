@@ -146,7 +146,6 @@ class Solution {
 #endif
         if (cages.size() < permLength + 6U)
             return curLen + min1 + min2 < bestLen;
-        vector<CagePair> temp;
         double mstLen = mst(permLength, uint16_t(cages.size()), Cage::Mix(), Cage::MixSq(), false);
         return curLen + min1 + min2 + mstLen < bestLen;
     }
@@ -293,7 +292,6 @@ int main(int argc, char** argv) {
 #endif
     }
     if (mode == Mode::MST) {
-        vector<CagePair> res;
         sol.path.resize(n);
         iota(sol.path.begin(), sol.path.end(), 0);
         double len = sol.mst(0, n, Cage::Distinguish(), Cage::DistinguishSq(), true);
