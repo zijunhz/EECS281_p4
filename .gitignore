@@ -2,7 +2,7 @@
 /zoo_debug
 /my.out
 /transform
-/trans.txt
+/trans*.txt
 *.o
 /zoo
 *.tar.gz
