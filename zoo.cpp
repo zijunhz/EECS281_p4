@@ -257,13 +257,10 @@ class Solution {
         return len;
     }
 
-    double randomFarthestInsert() {
+    double selectFarthestInsert(uint16_t startV) {
         vector<uint16_t> left(cages.size(), 0);
         iota(left.begin(), left.end(), 0);
-        for (uint16_t i = 0; i < cages.size(); ++i) {
-            uint16_t target = uint16_t(rand() % cages.size());
-            swap(left[i], left[target]);
-        }
+        swap(left[startV], left.back());
         list<uint16_t> path;
         path.push_back(left.back());
         path.push_back(left.back());
@@ -458,8 +455,8 @@ int main(int argc, char** argv) {
             }
         }
         double len = sol.nearestInsert();
-        for (int i = 0; i < 4; ++i)
-            len = min(len, sol.randomFarthestInsert());
+        for (uint16_t i = 1; i < n; ++i)
+            len = min(len, sol.selectFarthestInsert(i));
         vector<uint16_t> res;
         len = min(farthestInsert(sol.cages, res, 1), len);
         if (n != res.size())
