@@ -81,6 +81,7 @@ class Solution {
     vector<uint16_t> path;
     double bestLen;
     double curLen;
+    vector<vector<double>> adjMat;
     template <typename Dist, typename DistSq>
     double mst(uint16_t startIndex, uint16_t endIndex, Dist dist, DistSq distSq, bool needRes) {
         // index mapped to i-startIndex
@@ -110,12 +111,14 @@ class Solution {
             if (count > 0) {
                 if (needRes)
                     mstRes.emplace_back(CagePair(path[minNode + startIndex], path[pre[minNode] + startIndex]));
-                len += dist(cages[path[minNode + startIndex]], cages[path[pre[minNode] + startIndex]]);
+                len += needRes ? dist(cages[path[minNode + startIndex]], cages[path[pre[minNode] + startIndex]])
+                               : sqrt(adjMat[path[minNode + startIndex]][path[pre[minNode] + startIndex]]);
             }
             for (uint16_t j = 0; j < endIndex - startIndex; ++j) {
                 if (vis[j])
                     continue;
-                double newDis = distSq(cages[path[startIndex + j]], cages[path[startIndex + minNode]]);
+                double newDis = needRes ? distSq(cages[path[startIndex + j]], cages[path[startIndex + minNode]])
+                                        : adjMat[path[startIndex + j]][path[startIndex + minNode]];
                 if (newDis < dis[j]) {
                     pre[j] = minNode;
                     dis[j] = newDis;
@@ -135,10 +138,11 @@ class Solution {
         // return true;
         // return curLen < bestLen;
         double min1 = doubleInf, min2 = doubleInf;
-        Cage::Mix dist;
         for (uint16_t i = permLength; i < cages.size(); ++i) {
-            min1 = min(min1, dist(cages[path[0]], cages[path[i]]));
-            min2 = min(min2, dist(cages[path[permLength - 1]], cages[path[i]]));
+            min1 = min(min1, sqrt(adjMat[path[0]][path[i]]));  // dist(cages[], cages[]));
+            min2 = min(
+                min2,
+                sqrt(adjMat[path[permLength - 1]][path[i]]));  // dist(cages[path[permLength - 1]], cages[path[i]]));
         }
 #ifdef DEBUG_PROMISING
         if (true)
@@ -151,16 +155,15 @@ class Solution {
     }
 
     void genPerms(uint16_t permLength) {
-        Cage::Mix dist;
         if (permLength == path.size()) {
             // Do something with the path
-            curLen += dist(cages[path[0]], cages[path.back()]);
+            curLen += sqrt(adjMat[path[0]][path.back()]);  // dist(cages[path[0]], cages[path.back()]);
             // check the path and see if it's better
             if (curLen < bestLen) {
                 bestLen = curLen;
                 pathRes = path;
             }
-            curLen -= dist(cages[path[0]], cages[path.back()]);
+            curLen -= sqrt(adjMat[path[0]][path.back()]);  // dist(cages[path[0]], cages[path.back()]);
             return;
         }  // if ..complete path
 
@@ -174,10 +177,14 @@ class Solution {
 
         for (uint16_t i = permLength; i < path.size(); ++i) {
             swap(path[permLength], path[i]);
-            curLen += dist(cages[path[permLength]], cages[path[permLength - 1]]);
+            curLen +=
+                sqrt(adjMat[path[permLength]]
+                           [path[permLength - 1]]);  // dist(cages[path[permLength]], cages[path[permLength - 1]]);
             // stop genPerm
             genPerms(permLength + 1);
-            curLen -= dist(cages[path[permLength]], cages[path[permLength - 1]]);
+            curLen -=
+                sqrt(adjMat[path[permLength]]
+                           [path[permLength - 1]]);  // dist(cages[path[permLength]], cages[path[permLength - 1]]);
             swap(path[permLength], path[i]);
         }  // for ..unpermuted elements
     }      // genPerms()
@@ -371,6 +378,14 @@ int main(int argc, char** argv) {
         sol.curLen = 0;
         sol.path = res;
         sol.pathRes = res;
+        sol.adjMat = vector<vector<double>>(n, vector<double>(n, doubleInf));
+        Cage::MixSq dist;
+        for (uint16_t i = 0; i < n; ++i) {
+            for (uint16_t j = 0; j < i; ++j)
+                sol.adjMat[i][j] = dist(sol.cages[i], sol.cages[j]);
+            for (uint16_t j = i + 1; j < n; ++j)
+                sol.adjMat[i][j] = dist(sol.cages[i], sol.cages[j]);
+        }
         sol.genPerms(1);
         cout << sol.bestLen << '\n';
         for (uint16_t i = 0; i < n; ++i)
