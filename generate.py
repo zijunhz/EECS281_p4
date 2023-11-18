@@ -18,12 +18,12 @@ if size == "0":
             for i in range(2, n):
                 file.write(f"{randint(-10,10)} {randint(-10,10)}\n")
 else:
-    for count in range(0, 10):
+    for count in range(0, 1):
         with open(
-            f"./tests/large_test-{count}-OPTTSP.txt",
+            f"./tests/large_test-OPTTSP.txt",
             "w",
         ) as file:
-            n = 25
+            n = 17
             file.write(f"{n}\n")
             file.write(f"0 {randint(-100,0)}\n")
             file.write(f"{randint(-100,0)} 0\n")
