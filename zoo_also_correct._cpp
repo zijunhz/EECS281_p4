@@ -169,19 +169,6 @@ class Solution {
     }
 
     bool promising(uint16_t permLength) {
-        // if (cages.size() < permLength + 3U)
-        //     return true;
-
-        // vector<double> startV;
-        // startV.reserve(cages.size() - permLength);
-        // vector<double> endV;
-        // endV.reserve(cages.size() - permLength);
-        // for (uint16_t i = permLength; i < cages.size(); ++i) {
-        //     startV.push_back(adjMat[path[0]][path[i]]);
-        //     endV.push_back(adjMat[path[permLength - 1]][path[i]]);
-        // }
-        // double min1 = *min_element(startV.begin(), startV.end()), min2 = *min_element(endV.begin(), endV.end());
-
         double min1 = doubleInf, min2 = doubleInf;
         for (uint16_t i = permLength; i < cages.size(); ++i) {
             min1 = min(min1, adjMat[path[0]][path[i]]);  // dist(cages[], cages[]));
@@ -194,10 +181,6 @@ class Solution {
 #endif
         return (cages.size() < permLength + 6U) ? curLen + min1 + min2 < bestLen
                                                 : curLen + min1 + min2 + mstLocal(permLength) < bestLen;
-        //  if (cages.size() < permLength + 6U)
-        //     return curLen + min1 + min2 < bestLen;
-        // double mstLen = mstLocal(permLength);
-        // return curLen + min1 + min2 + mstLen < bestLen;
     }
 
     void genPerms(uint16_t permLength) {
