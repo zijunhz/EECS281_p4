@@ -23,7 +23,7 @@ else:
             f"./tests/large_test-OPTTSP.txt",
             "w",
         ) as file:
-            n = 17
+            n = 21
             file.write(f"{n}\n")
             file.write(f"0 {randint(-100,0)}\n")
             file.write(f"{randint(-100,0)} 0\n")

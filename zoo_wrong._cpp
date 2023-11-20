@@ -170,8 +170,6 @@ class Solution {
             return curLen + min1 + min2 < bestLen;
 #endif
         return curLen + min1 + min2 + mstLocal(permLength) < bestLen;
-        // return (cages.size() < permLength + 3U) ? curLen + min1 + min2 < bestLen
-        //                                         : curLen + min1 + min2 + mstLocal(permLength) < bestLen;
     }
 
     void genPerms(uint16_t permLength) {
@@ -213,7 +211,6 @@ class Solution {
         list<uint16_t> path;
         path.push_back(0);
         path.push_back(0);
-        vector<list<uint16_t>::iterator> nearest(cages.size(), path.begin());
         vector<double> distNow(cages.size(), doubleInf);
         distNow[0] = 0;
         auto curV = path.begin();
@@ -225,7 +222,6 @@ class Solution {
                 // double distNow = distSq(cages[left[i]], cages[*nearest[left[i]]]);
                 double challenger = adjMat[left[i]][*curV];  // distSq(cages[left[i]], cages[*curV]);
                 if (distNow[left[i]] > challenger) {
-                    nearest[left[i]] = curV;
                     distNow[left[i]] = challenger;
                 }
                 if (distNow[left[i]] < maxDis) {
@@ -247,8 +243,7 @@ class Solution {
                     toInsert = it;
                 }
             }
-            path.insert(next(toInsert), nxt);
-            curV = toInsert;
+            curV = path.insert(next(toInsert), nxt);
         }
         double len = 0;
         for (auto it = path.begin(), nxtIt = next(it); nxtIt != path.end(); it = nxtIt++) {
@@ -265,31 +260,26 @@ class Solution {
         path.push_back(left.back());
         path.push_back(left.back());
         left.pop_back();
-        vector<list<uint16_t>::iterator> nearest(cages.size(), path.begin());
-        vector<double> distNow(cages.size(), doubleInf);
+        vector<double> distNow(cages.size(), doubleInf);  // cage i - path
         auto curV = path.begin();
-        // int step = int(cages.size()) / 3 + 2;
         for (uint16_t count = 1; count < cages.size(); ++count) {
-            uint16_t nxt = 0;
+            uint16_t nxt = 0;  // cages[left[nxt]] -> path
             double maxDis = 0;
             for (uint16_t i = 0; i < left.size(); ++i) {
-                // double distNow = distSq(cages[left[i]], cages[*nearest[left[i]]]);
                 double challenger = adjMat[left[i]][*curV];  // distSq(cages[left[i]], cages[*curV]);
                 if (distNow[left[i]] > challenger) {
-                    nearest[left[i]] = curV;
                     distNow[left[i]] = challenger;
                 }
                 if (distNow[left[i]] > maxDis) {
-                    nxt = i;
                     maxDis = distNow[left[i]];
+                    nxt = i;
                 }
             }
-            // nxt = uint16_t(rand() % left.size());
             swap(left[nxt], left.back());
             nxt = left.back();
             left.pop_back();
 
-            auto toInsert = path.begin();
+            auto toInsert = path.begin();  // before toInsert->cages[nxt]->*toInsert
             maxDis = doubleInf;
             for (auto it = path.begin(), nxtIt = next(it); nxtIt != path.end(); it = nxtIt++) {
                 double curDis = adjMat[*it][nxt] + adjMat[*nxtIt][nxt] - adjMat[*it][*nxtIt];
@@ -298,8 +288,7 @@ class Solution {
                     toInsert = it;
                 }
             }
-            path.insert(next(toInsert), nxt);
-            curV = toInsert;
+            curV = path.insert(next(toInsert), nxt);
         }
         double len = 0;
         for (auto it = path.begin(), nxtIt = next(it); nxtIt != path.end(); it = nxtIt++) {
@@ -328,7 +317,6 @@ double farthestInsert(vector<Cage>& cages, vector<uint16_t>& res, int ratio) {
         uint16_t nxt = 0;
         double maxDis = 0;
         for (uint16_t i = 0; i < left.size(); ++i) {
-            // double distNow = distSq(cages[left[i]], cages[*nearest[left[i]]]);
             double challenger = distSq(cages[left[i]], cages[*curV]);
             if (distNow[left[i]] > challenger) {
                 nearest[left[i]] = curV;
@@ -343,19 +331,8 @@ double farthestInsert(vector<Cage>& cages, vector<uint16_t>& res, int ratio) {
         left[nxt] = left.back();
         left.pop_back();
         nxt = temp;
-
         auto toInsert = path.begin();
         maxDis = doubleInf;
-
-        // for (auto it = path.begin(), nxtIt = next(it); nxtIt != path.end(); it = nxtIt++) {
-        //     double curDis =
-        //         dist(cages[*it], cages[nxt]) + dist(cages[*nxtIt], cages[nxt]) - dist(cages[*it], cages[*nxtIt]);
-        //     if (curDis < maxDis) {
-        //         maxDis = curDis;
-        //         toInsert = it;
-        //     }
-        // }
-
         auto it = nearest[nxt];
         for (int i = 0; i < step && it != path.begin(); ++i)
             --it;
@@ -367,9 +344,7 @@ double farthestInsert(vector<Cage>& cages, vector<uint16_t>& res, int ratio) {
                 toInsert = it;
             }
         }
-
-        path.insert(next(toInsert), nxt);
-        curV = toInsert;
+        curV = path.insert(next(toInsert), nxt);
     }
     double len = 0;
     res.reserve(cages.size() + 1);
@@ -447,7 +422,7 @@ int main(int argc, char** argv) {
     } else {
         srand((unsigned)time(NULL));
         sol.dis.resize(n);
-        sol.adjMat = vector<vector<double>>(n, vector<double>(n, doubleInf));
+        sol.adjMat = vector<vector<double>>(n, vector<double>(n, 0));
         Cage::Mix dist;
         for (uint16_t i = 0; i < n; ++i) {
             for (uint16_t j = 0; j < i; ++j) {
@@ -460,8 +435,6 @@ int main(int argc, char** argv) {
         double len = sol.nearestInsert();
         for (uint16_t i = 1; i < n; ++i)
             len = min(len, sol.selectFarthestInsert(i));
-        // for (uint16_t i = 1; i < n; ++i)
-        //     cout << sol.selectFarthestInsert(i) << " " << sol.selectFarthestInsert(i) << "\n";
         vector<uint16_t> res;
         len = min(farthestInsert(sol.cages, res, 1), len);
         sol.bestLen = len;
