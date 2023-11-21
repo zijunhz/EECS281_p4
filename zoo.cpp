@@ -470,23 +470,26 @@ int main(int argc, char** argv) {
         }
         vector<uint16_t> res;
         sol.bestLen = doubleInf;
-        double len = doubleInf;
         for (uint16_t i = 0; i < n; ++i) {
             double len = sol.farthestInsert(res, i);
-            // cerr << len << endl;
+            if (sol.bestLen > len) {
+                sol.bestLen = len;
+                sol.pathRes = res;
+            }
+            res.clear();
+            len = sol.randomInsert(res);
+            if (sol.bestLen > len) {
+                sol.bestLen = len;
+                sol.pathRes = res;
+            }
+            res.clear();
+            len = sol.nearestInsert(res, i);
             if (sol.bestLen > len) {
                 sol.bestLen = len;
                 sol.pathRes = res;
             }
             res.clear();
         }
-        len = sol.randomInsert(res);
-        // cerr << len << endl;
-        if (sol.bestLen > len) {
-            sol.bestLen = len;
-            sol.pathRes = res;
-        }
-        res.clear();
         sol.curLen = 0;
         sol.path.resize(n);
         iota(sol.path.begin(), sol.path.end(), 0);
