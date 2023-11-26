@@ -451,7 +451,7 @@ int main(int argc, char** argv) {
         }
     } else if (mode == Mode::FASTTSP) {
         vector<uint16_t> res;
-        double len = farthestInsert(sol.cages, res, 8);
+        double len = farthestInsert(sol.cages, res, 10);
         cout << len << '\n';
         for (uint16_t i = 0; i < n; ++i)
             cout << res[i] << ' ';
